@@ -1,0 +1,51 @@
+# Single-Purpose OS (Arcane Manager)
+
+This image turns a homelab server into an [Arcane](https://github.com/getarcaneapp/arcane) management host. It exposes the manager web interface on TCP port `3552` and connects to the host's Podman service. Access to the Podman socket allows full control of containers on the host; restrict access to trusted administrators and networks.
+
+For rootful Podman systemd and Quadlet management, the manager runs as root in its container, mounts the host system D-Bus socket, and shares the writable `/etc/containers/systemd` directory used for installed Quadlets. Treat manager access as privileged host administration.
+
+Image: `ghcr.io/bryanconradhart/single-purpose-os-arcane-manager`
+
+Install this image using the shared [installation instructions](../../README.md), then complete the Arcane Manager setup below.
+
+## Setup after first login
+
+After installing the image and signing in, setup is offered automatically if it has not been completed. It configures the URL administrators will use to reach Arcane Manager.
+
+The setup creates an encryption key and saves it with the URL in `/etc/arcane/manager.env`, a root-only host file. Back up this file together with Arcane's data. The login offer is suppressed if the file exists.
+
+Open the configured URL (direct access is `http://<host>:3552`) and sign in as `arcane`. Arcane generates the initial password on first start and writes it to `initial-admin-password` inside its data volume, then requires a new password at first login:
+
+```bash
+sudo podman exec arcane-manager cat /app/data/initial-admin-password
+```
+
+Restrict access to trusted administrators; use HTTPS through a reverse proxy when accessing the manager remotely.
+
+If you need to change the URL after setup, edit `ARCANE_APP_URL` in `/etc/arcane/manager.env` with `sudoedit`, keep the existing `ARCANE_ENCRYPTION_KEY` unchanged, then restart the manager:
+
+```bash
+sudo systemctl restart arcane-manager.service
+```
+
+Do not rerun the setup script after setup: it generates a new encryption key, which can make existing manager data inaccessible.
+
+The manager's data and projects persist across operating-system updates.
+
+## Updates
+
+Update the operating system image with bootc:
+
+```bash
+sudo bootc upgrade
+sudo systemctl reboot
+```
+
+To pin a specific build, switch to its versioned image tag:
+
+```bash
+sudo bootc switch --transport registry ghcr.io/bryanconradhart/single-purpose-os-arcane-manager:vYYYY.MM.DD-HHMMSS-rRUN_NUMBER
+sudo systemctl reboot
+```
+
+See the [published image page](https://github.com/BryanConradHart/single-purpose-os/pkgs/container/single-purpose-os-arcane-manager) for available tags. Arcane Manager's container image is checked and updated by Podman's automatic update service. See the [Arcane installation guide](https://getarcane.app/docs/get-started/installation) and [remote environment guide](https://getarcane.app/docs/remote/environments) for administration and agent setup.

@@ -1,0 +1,79 @@
+name: Build and Publish Single-Purpose Images
+
+on:
+  schedule:
+    - cron: '0 0 * * 1' # Rebuilds automatically every Monday at midnight to pull upstream security fixes
+  push:
+    branches:
+      - main # Triggers a fresh build whenever you push or merge to main
+  workflow_dispatch: # Adds a Run Workflow button in GitHub UI
+
+concurrency:
+  group: build-and-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-tag:
+    name: Compute shared image tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compute build tag
+        id: meta
+        shell: bash
+        run: |
+          echo "tag=v$(date -u +%Y.%m.%d-%H%M%S)-r${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+
+  build-and-publish:
+    name: Build and Publish ${{ matrix.variant }} image
+    needs: build-tag
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: arcane-manager
+            image: single-purpose-os-arcane-manager
+          - variant: arcane-agent-edge
+            image: single-purpose-os-arcane-agent-edge
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Prepare shared files
+        run: ./scripts/prepare-variant-files.sh "${{ matrix.variant }}"
+
+      - name: Build and Publish Container Image
+        uses: blue-build/github-action@v1
+        with:
+          recipe: 'recipe.yml'
+          working_directory: ./variants/${{ matrix.variant }}
+          registry: ghcr.io
+          registry_token: ${{ secrets.GITHUB_TOKEN }}
+          cosign_private_key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          cosign_public_key: ${{ secrets.COSIGN_PUBLIC_KEY }}
+          prune: true
+          push: true
+          skip_checkout: true
+
+      - name: Publish a versioned image tag
+        shell: bash
+        env:
+          IMAGE_NAME: ${{ matrix.image }}
+          IMAGE_TAG: ${{ needs.build-tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}"
+          docker pull "${IMAGE}:latest"
+          docker tag "${IMAGE}:latest" "${IMAGE}:${IMAGE_TAG}"
+          docker push "${IMAGE}:${IMAGE_TAG}"
+          cosign verify --key cosign.pub "${IMAGE}:latest" >/dev/null
+          cosign verify --key cosign.pub "${IMAGE}:${IMAGE_TAG}" >/dev/null

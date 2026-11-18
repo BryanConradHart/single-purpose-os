@@ -1,0 +1,41 @@
+name: Verify and Test Pull Request Changes
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  verify-recipe:
+    name: Verify ${{ matrix.variant }} image recipe
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        variant:
+          - arcane-manager
+          - arcane-agent-edge
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Prepare shared files
+        run: ./scripts/prepare-variant-files.sh "${{ matrix.variant }}"
+
+      - name: Test build image
+        uses: blue-build/github-action@v1
+        with:
+          recipe: 'recipe.yml'
+          working_directory: ./variants/${{ matrix.variant }}
+          registry: ghcr.io
+          registry_token: ${{ secrets.GITHUB_TOKEN }}
+          cosign_private_key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          cosign_public_key: ${{ secrets.COSIGN_PUBLIC_KEY }}
+          prune: true
+          push: false
+          skip_checkout: true

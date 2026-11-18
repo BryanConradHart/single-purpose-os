@@ -1,0 +1,26 @@
+name: single-purpose-os-arcane-manager
+description: Single-purpose bootc image for homelabs with Arcane Manager
+base-image: ghcr.io/ublue-os/ucore
+image-version: stable
+
+modules:
+  - from-file: ../../../shared/spos-modules.yml
+
+  - type: files
+    files:
+      - source: arcane-manager-enroll.sh
+        destination: /usr/libexec/arcane-manager-enroll.sh
+      - source: 90-arcane-manager-setup-notice.sh
+        destination: /etc/profile.d/90-arcane-manager-setup-notice.sh
+      - source: arcane-manager.container
+        destination: /usr/share/containers/systemd/arcane-manager.container
+
+  - type: script
+    snippets:
+      - chmod 0755 /usr/libexec/arcane-manager-enroll.sh
+
+  - type: systemd
+    system:
+      enabled:
+        - podman.socket
+        - podman-auto-update.timer
