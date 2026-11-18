@@ -46,7 +46,7 @@ if ! manager_api_url=$(read_validated_input \
 fi
 
 if ! agent_token=$(read_validated_input \
-  "Arcane Edge Agent token" \
+  "Arcane Agent token" \
   '^arc_[[:alnum:]_-]+$' \
   "The Arcane token format is invalid" \
   true); then
@@ -66,5 +66,5 @@ systemctl daemon-reload
 mv "$config_tmp" /etc/arcane/agent.env
 trap - EXIT
 
-systemctl start arcane-edge-agent.service
-echo "Arcane Edge Agent enrollment completed."
+systemctl start arcane-agent.service
+echo "Arcane Agent enrollment completed."

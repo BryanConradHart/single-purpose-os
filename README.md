@@ -9,7 +9,7 @@ This repository is the hardware-neutral sibling of [strix-halo-server](https://g
 | Variant | Image | Description |
 | --- | --- | --- |
 | [Arcane Manager](variants/arcane-manager/README.md) | `ghcr.io/bryanconradhart/single-purpose-os-arcane-manager` | [Arcane](https://github.com/getarcaneapp/arcane) for administering local and remote container environments. |
-| [Arcane Edge Agent](variants/arcane-agent-edge/README.md) | `ghcr.io/bryanconradhart/single-purpose-os-arcane-agent-edge` | The [Arcane Edge Agent](https://github.com/getarcaneapp/arcane) for hosts that connect outbound to Arcane Manager. |
+| [Arcane Agent](variants/arcane-agent/README.md) | `ghcr.io/bryanconradhart/single-purpose-os-arcane-agent` | The [Arcane agent](https://github.com/getarcaneapp/arcane) for hosts that connect outbound to Arcane Manager. |
 
 ## Install
 

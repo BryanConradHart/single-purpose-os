@@ -14,7 +14,7 @@ jobs:
       matrix:
         variant:
           - arcane-manager
-          - arcane-agent-edge
+          - arcane-agent
     permissions:
       contents: read
 

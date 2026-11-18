@@ -36,8 +36,8 @@ jobs:
         include:
           - variant: arcane-manager
             image: single-purpose-os-arcane-manager
-          - variant: arcane-agent-edge
-            image: single-purpose-os-arcane-agent-edge
+          - variant: arcane-agent
+            image: single-purpose-os-arcane-agent
     permissions:
       contents: read
       packages: write
