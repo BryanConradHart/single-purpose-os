@@ -1,12 +1,16 @@
 [Unit]
 Description=Arcane Manager
+Documentation=https://getarcane.app/docs/podman/setup
 ConditionPathExists=/etc/arcane/manager.env
+Wants=network-online.target
 Requires=podman.socket
-After=podman.socket
+After=network-online.target podman.socket
 
 [Container]
 Image=ghcr.io/getarcaneapp/manager:latest
 ContainerName=arcane-manager
+Pull=missing
+AutoUpdate=registry
 EnvironmentFile=/etc/arcane/manager.env
 Environment=ARCANE_PROJECTS_DIRECTORY=/opt/docker
 Environment=PUID=0
@@ -15,15 +19,25 @@ Environment=DBUS_SYSTEM_BUS_ADDRESS=unix:path=/run/dbus/system_bus_socket
 PublishPort=3552:3552
 SecurityLabelDisable=true
 PodmanArgs=--cgroupns=host
-AutoUpdate=registry
 Volume=/run/podman/podman.sock:/var/run/docker.sock
 Volume=/run/dbus/system_bus_socket:/run/dbus/system_bus_socket
 Volume=/etc/containers/systemd:/etc/containers/systemd:rw
 Volume=arcane-manager-data:/app/data
 Volume=/var/home/core/arcane-projects:/opt/docker
+# The image has no shell, so the health check must use exec form.
+HealthCmd=["./arcane","health","--timeout","2s"]
+HealthInterval=10s
+HealthTimeout=3s
+HealthRetries=5
+HealthStartPeriod=15s
+# Gate readiness on the health check so podman-auto-update can roll back an image that never becomes healthy.
+Notify=healthy
 
 [Service]
 Restart=always
+# Pulling the manager image on first start can exceed systemd's default 90s.
+TimeoutStartSec=900
+TimeoutStopSec=70
 
 [Install]
 WantedBy=multi-user.target
