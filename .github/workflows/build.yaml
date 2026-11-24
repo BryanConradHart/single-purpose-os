@@ -52,7 +52,7 @@ jobs:
 
       # cosign v3 breaking change hack
       - name: Install Cosign v2
-        uses: sigstore/cosign-installer@v4
+        uses: sigstore/cosign-installer@v3
         with:
           cosign-release: 'v2.6.5'
           install-dir: '/usr/local/bin'
