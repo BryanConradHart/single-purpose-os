@@ -57,8 +57,7 @@ jobs:
           working_directory: ./variants/${{ matrix.variant }}
           registry: ghcr.io
           registry_token: ${{ secrets.GITHUB_TOKEN }}
-          # temporarily remove signing due to breaking cosign v3 change
-          # cosign_private_key: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          cosign_private_key: ${{ secrets.COSIGN_PRIVATE_KEY }}
           cosign_public_key: ${{ secrets.COSIGN_PUBLIC_KEY }}
           prune: true
           push: true
@@ -84,6 +83,7 @@ jobs:
 
           # temporary due to breaking cosign V3 issue
           DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE}:latest" | cut -d'@' -f2)
+          cosign clean --force "${IMAGE}@${DIGEST}"
           LEGACY_FLAGS=()
           if cosign sign --help 2>&1 | grep -q -- "--new-bundle-format"; then
             LEGACY_FLAGS+=(--new-bundle-format=false --use-signing-config=false)
