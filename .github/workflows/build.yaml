@@ -59,7 +59,7 @@ jobs:
           registry_token: ${{ secrets.GITHUB_TOKEN }}
           # temporarily remove signing due to breaking cosign v3 change
           # cosign_private_key: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          # cosign_public_key: ${{ secrets.COSIGN_PUBLIC_KEY }}
+          cosign_public_key: ${{ secrets.COSIGN_PUBLIC_KEY }}
           prune: true
           push: true
           skip_checkout: true
