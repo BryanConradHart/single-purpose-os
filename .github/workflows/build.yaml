@@ -84,11 +84,18 @@ jobs:
           IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}"
           docker pull "${IMAGE}:latest"
 
-          # temporary due to breaking cosign V3 issue
+          # temporary for cosign v3 breaking change
           DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE}:latest" | cut -d'@' -f2)
-          cosign clean --force "${IMAGE}@${DIGEST}"
+          CLEAN_FLAGS=()
           SIGN_FLAGS=()
           VERIFY_FLAGS=()
+
+          if cosign clean --help 2>&1 | grep -q -- "--recursive"; then
+            CLEAN_FLAGS+=(--recursive)
+          fi
+          if cosign sign --help 2>&1 | grep -q -- "--recursive"; then
+            SIGN_FLAGS+=(--recursive)
+          fi
           if cosign sign --help 2>&1 | grep -q -- "--new-bundle-format"; then
             SIGN_FLAGS+=(--new-bundle-format=false)
           fi
@@ -100,8 +107,9 @@ jobs:
           if cosign verify --help 2>&1 | grep -q -- "--new-bundle-format"; then
             VERIFY_FLAGS+=(--new-bundle-format=false)
           fi
+          cosign clean --force "${CLEAN_FLAGS[@]}" "${IMAGE}@${DIGEST}"
           cosign sign --yes "${SIGN_FLAGS[@]}" --key env://COSIGN_PRIVATE_KEY "${IMAGE}@${DIGEST}"
-          # end temporary fix
+          # end temporary section
 
           # remove "${VERIFY_FLAGS[@]}" after cosign v3 is fixed
           docker tag "${IMAGE}:latest" "${IMAGE}:${IMAGE_TAG}"
