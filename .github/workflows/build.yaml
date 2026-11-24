@@ -75,6 +75,9 @@ jobs:
         env:
           IMAGE_NAME: ${{ matrix.image }}
           IMAGE_TAG: ${{ needs.build-tag.outputs.tag }}
+          # remove cosign env vars after cosign v3 issue is fixed
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ""
         run: |
           set -euo pipefail
 
