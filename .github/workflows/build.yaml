@@ -50,6 +50,11 @@ jobs:
       - name: Prepare shared files
         run: ./scripts/prepare-variant-files.sh "${{ matrix.variant }}"
 
+      - name: Install Cosign v2 for bootc compatibility
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.6.1'
+
       - name: Build and Publish Container Image
         uses: blue-build/github-action@v1
         with:
