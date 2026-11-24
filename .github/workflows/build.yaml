@@ -87,15 +87,24 @@ jobs:
           # temporary due to breaking cosign V3 issue
           DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE}:latest" | cut -d'@' -f2)
           cosign clean --force "${IMAGE}@${DIGEST}"
-          LEGACY_FLAGS=()
+          SIGN_FLAGS=()
+          VERIFY_FLAGS=()
           if cosign sign --help 2>&1 | grep -q -- "--new-bundle-format"; then
-            LEGACY_FLAGS+=(--new-bundle-format=false --use-signing-config=false)
+            SIGN_FLAGS+=(--new-bundle-format=false)
           fi
-          cosign sign --yes "${LEGACY_FLAGS[@]}" --key env://COSIGN_PRIVATE_KEY "${IMAGE}@${DIGEST}"
+          if cosign sign --help 2>&1 | grep -q -- "--use-signing-config"; then
+            SIGN_FLAGS+=(--use-signing-config=false)
+          elif cosign sign --help 2>&1 | grep -q -- "--no-signing-config"; then
+            SIGN_FLAGS+=(--no-signing-config=true)
+          fi
+          if cosign verify --help 2>&1 | grep -q -- "--new-bundle-format"; then
+            VERIFY_FLAGS+=(--new-bundle-format=false)
+          fi
+          cosign sign --yes "${SIGN_FLAGS[@]}" --key env://COSIGN_PRIVATE_KEY "${IMAGE}@${DIGEST}"
           # end temporary fix
 
-          # remove "${LEGACY_FLAGS[@]}" after cosign v3 is fixed
+          # remove "${VERIFY_FLAGS[@]}" after cosign v3 is fixed
           docker tag "${IMAGE}:latest" "${IMAGE}:${IMAGE_TAG}"
           docker push "${IMAGE}:${IMAGE_TAG}"
-          cosign verify "${LEGACY_FLAGS[@]}" --key cosign.pub "${IMAGE}:latest" >/dev/null
-          cosign verify "${LEGACY_FLAGS[@]}" --key cosign.pub "${IMAGE}:${IMAGE_TAG}" >/dev/null
+          cosign verify "${VERIFY_FLAGS[@]}" --key cosign.pub "${IMAGE}:latest" >/dev/null
+          cosign verify "${VERIFY_FLAGS[@]}" --key cosign.pub "${IMAGE}:${IMAGE_TAG}" >/dev/null
