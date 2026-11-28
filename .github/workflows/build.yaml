@@ -65,16 +65,48 @@ jobs:
           push: true
           skip_checkout: true
 
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # cosign v3 breaking change hack
+      - name: Install Cosign v2
+        uses: sigstore/cosign-installer@v4.1.3
+        with:
+          cosign-release: 'v2.6.5'
+          install-dir: '/usr/local/bin'
+          use-sudo: 'true'
+          
       - name: Publish a versioned image tag
         shell: bash
         env:
           IMAGE_NAME: ${{ matrix.image }}
           IMAGE_TAG: ${{ needs.build-tag.outputs.tag }}
+          # remove cosign env vars after cosign v3 issue is fixed
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ""
         run: |
           set -euo pipefail
 
           IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}"
           docker pull "${IMAGE}:latest"
+
+          # temporary for cosign v3 breaking change
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE}:latest" | cut -d'@' -f2)
+          # Sign the top-level index digest cleanly
+          cosign clean --force "${IMAGE}@${DIGEST}"
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY "${IMAGE}@${DIGEST}"
+
+          # Clean and sign each platform manifest directly so docker-manifest-digest matches each platform
+          for CHILD_DIGEST in $(skopeo inspect --raw "docker://${IMAGE}@${DIGEST}" | jq -r '.manifests[]?.digest // empty'); do
+            cosign clean --force "${IMAGE}@${CHILD_DIGEST}"
+            cosign sign --yes --key env://COSIGN_PRIVATE_KEY "${IMAGE}@${CHILD_DIGEST}"
+          done
+          # end temporary section
+
           docker tag "${IMAGE}:latest" "${IMAGE}:${IMAGE_TAG}"
           docker push "${IMAGE}:${IMAGE_TAG}"
           cosign verify --key cosign.pub "${IMAGE}:latest" >/dev/null
