@@ -34,6 +34,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - variant: base
+            image: single-purpose-os-base
           - variant: arcane-manager
             image: single-purpose-os-arcane-manager
           - variant: arcane-agent
@@ -59,7 +61,7 @@ jobs:
           registry_token: ${{ secrets.GITHUB_TOKEN }}
           cosign_private_key: ${{ secrets.COSIGN_PRIVATE_KEY }}
           cosign_public_key: ${{ secrets.COSIGN_PUBLIC_KEY }}
-          prune: true
+          pr_event_number: ${{ github.event.number }}
           push: true
           skip_checkout: true
 
@@ -77,3 +79,33 @@ jobs:
           docker push "${IMAGE}:${IMAGE_TAG}"
           cosign verify --key cosign.pub "${IMAGE}:latest" >/dev/null
           cosign verify --key cosign.pub "${IMAGE}:${IMAGE_TAG}" >/dev/null
+
+  notify-downstream:
+    name: Trigger downstream builds
+    needs: build-and-publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get App token for strix-halo-server
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.STRIX_DISPATCH_APP_ID }}
+          private-key: ${{ secrets.STRIX_DISPATCH_APP_KEY }}
+          installation-id: ${{ secrets.STRIX_DISPATCH_INSTALLATION_ID }}
+          repositories: strix-halo-server
+
+      - name: Dispatch strix-halo-server build
+        uses: actions/github-script@v7
+        with:
+          # The built-in GITHUB_TOKEN cannot trigger workflows in another
+          # repository, so we dispatch as the cross-repo App. Per GitHub's
+          # REST docs, createDispatchEvent requires "Contents: read and
+          # write" on the App's installation token.
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            await github.rest.repos.createDispatchEvent({
+              owner: context.repo.owner,
+              repo: 'strix-halo-server',
+              event_type: 'spos-images-published',
+              client_payload: { tag: '${{ needs.build-tag.outputs.tag }}' },
+            });

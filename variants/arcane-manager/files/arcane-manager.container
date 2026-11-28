@@ -12,7 +12,6 @@ ContainerName=arcane-manager
 Pull=missing
 AutoUpdate=registry
 EnvironmentFile=/etc/arcane/manager.env
-Environment=ARCANE_PROJECTS_DIRECTORY=/opt/docker
 Environment=PUID=0
 Environment=PGID=0
 Environment=DBUS_SYSTEM_BUS_ADDRESS=unix:path=/run/dbus/system_bus_socket
@@ -23,7 +22,11 @@ Volume=/run/podman/podman.sock:/var/run/docker.sock
 Volume=/run/dbus/system_bus_socket:/run/dbus/system_bus_socket
 Volume=/etc/containers/systemd:/etc/containers/systemd:rw
 Volume=arcane-manager-data:/app/data
-Volume=/var/home/core/arcane-projects:/opt/docker
+# Per https://getarcane.app/docs/podman/setup, managing projects from a host folder
+# requires a Volume mount and ARCANE_PROJECTS_DIRECTORY together. Neither is set by
+# default; the setup script writes both into a drop-in under
+# /etc/containers/systemd/arcane-manager.container.d/. Without them, projects live in
+# the container layer and do not survive container recreation by podman-auto-update.
 # The image has no shell, so the health check must use exec form.
 HealthCmd=["./arcane","health","--timeout","2s"]
 HealthInterval=10s

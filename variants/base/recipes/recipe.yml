@@ -1,0 +1,13 @@
+name: single-purpose-os-base
+description: Minimal single-purpose-os platform. Common starting point for the other variants and for your own images.
+base-image: ghcr.io/ublue-os/ucore
+image-version: stable
+
+modules:
+  - from-file: ../../../shared/spos-modules.yml
+
+  - type: systemd
+    system:
+      enabled:
+        - podman.socket
+        - podman-auto-update.timer

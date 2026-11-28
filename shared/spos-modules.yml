@@ -15,9 +15,23 @@ modules:
         destination: /etc/containers/registries.d/single-purpose-os.yaml
       - source: single-purpose-os-cosign.pub
         destination: /usr/share/pki/containers/single-purpose-os.pub
+      - source: spos-ssh-keys.sh
+        destination: /usr/libexec/spos-ssh-keys.sh
+      - source: spos-quadlet-env.sh
+        destination: /usr/libexec/spos-quadlet-env.sh
+      - source: spos-ssh-keys.service
+        destination: /usr/lib/systemd/system/spos-ssh-keys.service
+
+  - type: systemd
+    system:
+      enabled:
+        - spos-ssh-keys.service
 
   - type: script
+    scripts:
+      - provision-user.sh
     snippets:
+      - chmod 0755 /usr/libexec/spos-ssh-keys.sh
       - |
         set -euo pipefail
         policy=/etc/containers/policy.json

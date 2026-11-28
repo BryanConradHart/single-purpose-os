@@ -1,0 +1,10 @@
+[Unit]
+Description=Authorize the installer SSH key for the core user
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/spos-ssh-keys.sh
+
+[Install]
+WantedBy=multi-user.target
